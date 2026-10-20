@@ -602,7 +602,7 @@
       var found = [];
       for (var n = 1; n <= MAX_LYRIC_PAGES; n++) {
         var hit = null;
-        var exts = ['jpeg', 'jpg', 'png', 'webp'];
+        var exts = ['PNG', 'jpg', 'png', 'jpeg'];
         for (var e = 0; e < exts.length; e++) {
           hit = await probeImage(LYRIC_DIR + keyword + '_' + n + '.' + exts[e]);
           if (hit) break;
