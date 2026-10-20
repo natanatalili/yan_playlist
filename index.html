@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#0b1220" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Corda歌曲" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icon-192.png" />
+  <title>金色のコルダ 歌曲搜尋</title>
+  <style>
+    :root {
+      --bg: #0b1220;
+      --panel: #111827;
+      --card: #151c2c;
+      --card-hover: #1a2336;
+      --border: #243044;
+      --text: #e8eef8;
+      --muted: #8b9bb4;
+      --accent: #3b9eff;
+      --accent-soft: rgba(59,158,255,0.15);
+      --purple: #a78bfa;
+      --green: #34d399;
+      --danger: #f87171;
+      --radius: 12px;
+      --radius-sm: 8px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang TC", "Microsoft JhengHei", "Noto Sans TC", sans-serif;
+      line-height: 1.45;
+      -webkit-font-smoothing: antialiased;
+      overscroll-behavior-y: contain;
+    }
+    body {
+      min-height: 100dvh;
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 12px 32px;
+      padding-top: max(12px, env(safe-area-inset-top));
+      padding-bottom: max(32px, env(safe-area-inset-bottom));
+    }
+    .topbar {
+      position: sticky; top: 0; z-index: 40;
+      background: linear-gradient(180deg, var(--bg) 85%, transparent);
+      padding: 10px 0 6px;
+    }
+    .title-row {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 10px; margin-bottom: 10px;
+    }
+    .title-row h1 { font-size: 1.15rem; font-weight: 700; }
+    .title-row h1 span {
+      background: linear-gradient(90deg, #3b9eff, #a78bfa);
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+    }
+    .title-actions { display: flex; gap: 6px; flex-shrink: 0; }
+    .icon-btn {
+      width: 38px; height: 38px; border-radius: 50%;
+      border: 1px solid var(--border); background: var(--panel);
+      color: var(--text); font-size: 1rem;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; transition: background .15s, transform .1s;
+    }
+    .icon-btn:active { transform: scale(0.92); background: var(--card-hover); }
+    .icon-btn.spin svg { animation: spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .search-row { margin-bottom: 10px; }
+    .search-box { position: relative; }
+    .search-box input {
+      width: 100%; padding: 12px 40px 12px 40px; border-radius: 999px;
+      border: 1px solid var(--border); background: var(--panel);
+      color: var(--text); font-size: 16px; outline: none;
+      transition: border-color .15s, box-shadow .15s;
+    }
+    .search-box input:focus {
+      border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft);
+    }
+    .search-box input::placeholder { color: var(--muted); }
+    .search-box .icon {
+      position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+      color: var(--muted); pointer-events: none; font-size: 14px;
+    }
+    .search-box .clear {
+      position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+      background: none; border: none; color: var(--muted);
+      width: 30px; height: 30px; border-radius: 50%;
+      display: none; align-items: center; justify-content: center;
+      cursor: pointer; font-size: 18px;
+    }
+    .search-box .clear.show { display: flex; }
+
+    .filters { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 6px; }
+    .filter-item { flex: 1 1 140px; min-width: 0; }
+    .filter-item label {
+      display: block; font-size: 0.68rem; color: var(--muted);
+      margin-bottom: 4px; padding-left: 2px;
+    }
+    .filter-item select {
+      width: 100%; padding: 10px 28px 10px 12px; border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      background: var(--panel) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%238b9bb4' d='M6 8L1 3h10z'/%3E%3C/svg%3E") no-repeat right 10px center;
+      color: var(--text); font-size: 0.85rem; appearance: none; -webkit-appearance: none;
+      outline: none; cursor: pointer;
+    }
+    .filter-item select:focus { border-color: var(--accent); }
+
+    .filter-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 6px 0 2px; }
+    .btn {
+      padding: 8px 14px; border-radius: 999px; border: 1px solid var(--border);
+      background: transparent; color: var(--muted); font-size: 0.8rem;
+      cursor: pointer; transition: all .15s; white-space: nowrap;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn.ghost.active, .btn.ghost:hover {
+      border-color: var(--accent); color: var(--accent); background: var(--accent-soft);
+    }
+    .btn.lyrics {
+      border-color: rgba(167,139,250,0.4);
+      color: var(--purple);
+      background: rgba(167,139,250,0.1);
+      font-weight: 600;
+      width: 100%;
+      margin-top: 4px;
+      padding: 9px 14px;
+    }
+    .btn.lyrics:active { background: rgba(167,139,250,0.2); }
+
+    .toolbar {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 10px; padding: 8px 0 12px; flex-wrap: wrap;
+    }
+    .toolbar .count { font-size: 0.82rem; color: var(--muted); }
+    .toolbar .count strong { color: var(--accent); font-weight: 600; }
+    .toolbar .meta-info { font-size: 0.7rem; color: var(--muted); opacity: 0.85; }
+    .toolbar-right { display: flex; gap: 8px; align-items: center; }
+    .toolbar select {
+      padding: 7px 28px 7px 10px; border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      background: var(--panel) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%238b9bb4' d='M6 8L1 3h10z'/%3E%3C/svg%3E") no-repeat right 8px center;
+      color: var(--text); font-size: 0.8rem; appearance: none; -webkit-appearance: none; outline: none;
+    }
+
+    .status-bar { font-size: 0.72rem; color: var(--muted); padding: 0 2px 8px; min-height: 1.2em; }
+    .status-bar.error { color: var(--danger); }
+
+    .grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
+    @media (min-width: 560px) { .grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (min-width: 860px) { .grid { grid-template-columns: repeat(3, 1fr); } }
+
+    .card {
+      background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 14px; display: flex; flex-direction: column; gap: 8px;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .card:active { background: var(--card-hover); }
+
+    .badge {
+      display: inline-flex; align-items: center; padding: 2px 9px; border-radius: 999px;
+      font-size: 0.68rem; font-weight: 600;
+      background: rgba(59,158,255,0.12); color: var(--accent);
+      border: 1px solid rgba(59,158,255,0.25); width: fit-content;
+    }
+    .badge.purple { background: rgba(167,139,250,0.12); color: var(--purple); border-color: rgba(167,139,250,0.25); }
+    .badge.green { background: rgba(52,211,153,0.12); color: var(--green); border-color: rgba(52,211,153,0.25); }
+    .badge.orange { background: rgba(251,146,60,0.12); color: #fb923c; border-color: rgba(251,146,60,0.25); }
+
+    .card-title { font-size: 1.05rem; font-weight: 700; line-height: 1.3; word-break: break-word; }
+    .card-sub { font-size: 0.8rem; color: var(--muted); margin-top: -2px; }
+    .meta { font-size: 0.78rem; color: var(--muted); }
+    .meta strong { color: #b0becf; font-weight: 500; }
+
+    .ver-list { margin-top: 2px; display: flex; flex-direction: column; gap: 6px; }
+    .ver-row { background: rgba(0,0,0,0.25); border-radius: 8px; padding: 7px 10px; font-size: 0.78rem; }
+    .ver-row .v-name { color: var(--text); font-weight: 500; }
+    .ver-row .v-singer { color: var(--muted); margin-top: 2px; font-size: 0.72rem; }
+    .ver-row .v-singer::before { content: "🎤 "; }
+
+    .highlight { background: rgba(59,158,255,0.35); border-radius: 2px; padding: 0 1px; }
+    .empty { grid-column: 1 / -1; text-align: center; padding: 56px 16px; color: var(--muted); }
+    .empty .emoji { font-size: 2.4rem; margin-bottom: 8px; }
+    .loading { grid-column: 1 / -1; text-align: center; padding: 48px 16px; color: var(--muted); }
+    .loading .spinner {
+      width: 32px; height: 32px; border: 3px solid var(--border); border-top-color: var(--accent);
+      border-radius: 50%; margin: 0 auto 12px; animation: spin 0.7s linear infinite;
+    }
+
+    #toTop {
+      position: fixed; right: 16px; bottom: max(20px, env(safe-area-inset-bottom));
+      width: 44px; height: 44px; border-radius: 50%; background: var(--accent); color: #fff;
+      border: none; font-size: 1.15rem; box-shadow: 0 4px 18px rgba(59,158,255,0.4);
+      display: none; align-items: center; justify-content: center; cursor: pointer; z-index: 50;
+      -webkit-tap-highlight-color: transparent;
+    }
+    #toTop.show { display: flex; }
+
+    .toast {
+      position: fixed; left: 50%; bottom: max(80px, calc(env(safe-area-inset-bottom) + 70px));
+      transform: translateX(-50%) translateY(20px);
+      background: #1e293b; color: var(--text); padding: 10px 18px; border-radius: 999px;
+      font-size: 0.85rem; border: 1px solid var(--border); box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+      opacity: 0; pointer-events: none; transition: opacity .25s, transform .25s; z-index: 60;
+      white-space: nowrap; max-width: 90vw;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    /* ===== Lyrics Viewer Modal ===== */
+    .lyrics-modal {
+      position: fixed; inset: 0; z-index: 100;
+      background: rgba(0,0,0,0.92);
+      display: none; flex-direction: column;
+      padding-top: env(safe-area-inset-top);
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+    .lyrics-modal.open { display: flex; }
+    .lyrics-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 14px; gap: 10px; flex-shrink: 0;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+    .lyrics-header .title {
+      font-size: 0.95rem; font-weight: 600; flex: 1;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .lyrics-header .close {
+      width: 36px; height: 36px; border-radius: 50%;
+      border: 1px solid rgba(255,255,255,0.15); background: transparent;
+      color: #fff; font-size: 1.2rem; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .lyrics-body {
+      flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;
+      padding: 12px; display: flex; flex-direction: column; gap: 12px;
+      align-items: center;
+    }
+    .lyrics-body img {
+      width: 100%; max-width: 640px; height: auto;
+      border-radius: 8px; background: #111;
+      display: block;
+    }
+    .lyrics-status {
+      color: var(--muted); font-size: 0.85rem; padding: 20px; text-align: center;
+    }
+    .lyrics-nav {
+      display: flex; align-items: center; justify-content: center;
+      gap: 16px; padding: 10px 14px;
+      border-top: 1px solid rgba(255,255,255,0.08); flex-shrink: 0;
+    }
+    .lyrics-nav .page {
+      font-size: 0.85rem; color: var(--muted); min-width: 60px; text-align: center;
+    }
+    .lyrics-nav button {
+      width: 44px; height: 44px; border-radius: 50%;
+      border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.06);
+      color: #fff; font-size: 1.1rem; cursor: pointer;
+    }
+    .lyrics-nav button:disabled { opacity: 0.3; cursor: default; }
+
+    @media (max-width: 480px) { .filter-item { flex: 1 1 calc(50% - 8px); } }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="title-row">
+      <h1>🎻 <span>金色のコルダ 歌曲</span></h1>
+      <div class="title-actions">
+        <button class="icon-btn" id="btnRefresh" type="button" title="更新資料" aria-label="更新資料">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="23 4 23 10 17 10"></polyline>
+            <polyline points="1 20 1 14 7 14"></polyline>
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="search-row">
+      <div class="search-box">
+        <span class="icon">🔍</span>
+        <input id="q" type="search" placeholder="歌名、角色、版本、歌手…" autocomplete="off" enterkeyhint="search" />
+        <button class="clear" id="clearBtn" type="button" aria-label="清除">×</button>
+      </div>
+    </div>
+
+    <div class="filters">
+      <div class="filter-item">
+        <label>版本系列</label>
+        <select id="fSeries">
+          <option value="">全部系列</option>
+          <option value="星奏学院祭">星奏学院祭</option>
+          <option value="Featuring">Featuring</option>
+          <option value="Kiniro no Corda 1">Kiniro no Corda 1</option>
+          <option value="Kiniro no Corda 2">Kiniro no Corda 2</option>
+          <option value="Kiniro no Corda 3">Kiniro no Corda 3</option>
+          <option value="Kiniro no Corda 4">Kiniro no Corda 4</option>
+          <option value="Brothers Conflict">Brothers Conflict</option>
+          <option value="Code:Realize">Code:Realize</option>
+          <option value="柯南／動漫主題曲">柯南／動漫主題曲</option>
+          <option value="其他">其他</option>
+        </select>
+      </div>
+      <div class="filter-item">
+        <label>主要聲優</label>
+        <select id="fSinger">
+          <option value="">全部聲優</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="filter-actions">
+      <button class="btn ghost" id="btnReset" type="button">清除篩選</button>
+    </div>
+  </div>
+
+  <div class="toolbar">
+    <div>
+      <div class="count">顯示 <strong id="shown">0</strong> / <span id="total">0</span> 首</div>
+      <div class="meta-info" id="lastUpdate"></div>
+    </div>
+    <div class="toolbar-right">
+      <select id="sortBy">
+        <option value="name">按歌名排序</option>
+        <option value="role">按角色排序</option>
+        <option value="versions">按版本數排序</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="status-bar" id="status"></div>
+  <div class="grid" id="grid">
+    <div class="loading"><div class="spinner"></div>載入歌曲資料中…</div>
+  </div>
+  <button id="toTop" type="button" aria-label="回到頂部">↑</button>
+  <div class="toast" id="toast"></div>
+
+  <!-- Lyrics Modal -->
+  <div class="lyrics-modal" id="lyricsModal" role="dialog" aria-modal="true">
+    <div class="lyrics-header">
+      <div class="title" id="lyricsTitle">歌詞</div>
+      <button class="close" id="lyricsClose" type="button" aria-label="關閉">×</button>
+    </div>
+    <div class="lyrics-body" id="lyricsBody">
+      <div class="lyrics-status">載入中…</div>
+    </div>
+    <div class="lyrics-nav">
+      <button type="button" id="lyricsPrev" aria-label="上一張">‹</button>
+      <div class="page" id="lyricsPage">—</div>
+      <button type="button" id="lyricsNext" aria-label="下一張">›</button>
+    </div>
+  </div>
+
+  <script>
+    const CSV_URL = './Songlist.csv';
+    const LYRIC_DIR = './lyricpic/';
+    const CACHE_KEY = 'corda_songs_v2';
+    const CACHE_TIME_KEY = 'corda_songs_time_v2';
+    const MAX_LYRIC_PAGES = 30;
+
+    let SONGS = [];
+    let query = '';
+    let seriesFilter = '';
+    let singerFilter = '';
+    let sortBy = 'name';
+
+    // lyrics viewer state
+    let lyricImages = [];
+    let lyricIndex = 0;
+
+    const qEl = document.getElementById('q');
+    const clearBtn = document.getElementById('clearBtn');
+    const fSeries = document.getElementById('fSeries');
+    const fSinger = document.getElementById('fSinger');
+    const sortEl = document.getElementById('sortBy');
+    const grid = document.getElementById('grid');
+    const shownEl = document.getElementById('shown');
+    const totalEl = document.getElementById('total');
+    const toTop = document.getElementById('toTop');
+    const btnReset = document.getElementById('btnReset');
+    const btnRefresh = document.getElementById('btnRefresh');
+    const statusEl = document.getElementById('status');
+    const lastUpdateEl = document.getElementById('lastUpdate');
+    const toastEl = document.getElementById('toast');
+    const lyricsModal = document.getElementById('lyricsModal');
+    const lyricsBody = document.getElementById('lyricsBody');
+    const lyricsTitle = document.getElementById('lyricsTitle');
+    const lyricsPage = document.getElementById('lyricsPage');
+    const lyricsPrev = document.getElementById('lyricsPrev');
+    const lyricsNext = document.getElementById('lyricsNext');
+    const lyricsClose = document.getElementById('lyricsClose');
+
+    function toast(msg, ms = 2200) {
+      toastEl.textContent = msg;
+      toastEl.classList.add('show');
+      clearTimeout(toastEl._t);
+      toastEl._t = setTimeout(() => toastEl.classList.remove('show'), ms);
+    }
+    function setStatus(msg, type = '') {
+      statusEl.textContent = msg || '';
+      statusEl.className = 'status-bar' + (type ? ' ' + type : '');
+    }
+    function normalize(s) {
+      return (s || '').toLowerCase().replace(/\s+/g, '');
+    }
+
+    function parseCSV(text) {
+      const rows = [];
+      let i = 0, field = '', row = [], inQuotes = false;
+      text = text.replace(/^\uFEFF/, '');
+      while (i < text.length) {
+        const c = text[i];
+        if (inQuotes) {
+          if (c === '"') {
+            if (text[i + 1] === '"') { field += '"'; i += 2; continue; }
+            inQuotes = false; i++; continue;
+          }
+          field += c; i++; continue;
+        }
+        if (c === '"') { inQuotes = true; i++; continue; }
+        if (c === ',') { row.push(field); field = ''; i++; continue; }
+        if (c === '\n' || c === '\r') {
+          if (c === '\r' && text[i + 1] === '\n') i++;
+          row.push(field); field = '';
+          if (row.length > 1 || (row[0] && row[0].trim())) rows.push(row);
+          row = []; i++; continue;
+        }
+        field += c; i++;
+      }
+      if (field || row.length) {
+        row.push(field);
+        if (row.length > 1 || (row[0] && row[0].trim())) rows.push(row);
+      }
+      return rows;
+    }
+
+    function rowsToSongs(rows) {
+      if (!rows.length) return [];
+      const header = rows[0].map(h => (h || '').trim().toLowerCase());
+      let lyricsCol = header.indexOf('lyrics');
+      if (lyricsCol < 0) lyricsCol = header.length - 1;
+
+      const data = rows.slice(1);
+      const songs = [];
+      const seen = new Set();
+      for (const row of data) {
+        if (!row || !row[0] || !String(row[0]).trim()) continue;
+        const songName = String(row[0]).trim();
+        const role = (row[1] || '').trim();
+        if (songName.startsWith('}') || songName.startsWith('|')) continue;
+        if (songName.includes('新增歌曲清單')) continue;
+
+        const versions = [];
+        for (let i = 2; i < Math.min(row.length, 12); i += 2) {
+          const ver = (row[i] || '').trim();
+          const singer = (i + 1 < row.length ? (row[i + 1] || '').trim() : '');
+          if (ver || singer) versions.push({ version: ver, singer });
+        }
+        if (versions.length === 1 && versions[0].version === '新增歌曲清單') continue;
+
+        const key = songName.toLowerCase() + '|' + role.toLowerCase();
+        if (seen.has(key)) continue;
+        seen.add(key);
+
+        let lyrics = '';
+        if (lyricsCol >= 0 && row[lyricsCol]) lyrics = String(row[lyricsCol]).trim();
+
+        const clean = songName.startsWith('La Corda-')
+          ? songName.slice('La Corda-'.length).replace(/^[\s\-_]+/, '')
+          : '';
+
+        songs.push({ song: songName, role, versions, clean, lyrics });
+      }
+      return songs;
+    }
+
+    async function fetchCSV(force = false) {
+      btnRefresh.classList.add('spin');
+      setStatus(force ? '正在從 GitHub 更新…' : '載入中…');
+      try {
+        if (!force) {
+          const cached = localStorage.getItem(CACHE_KEY);
+          const cachedTime = localStorage.getItem(CACHE_TIME_KEY);
+          if (cached) {
+            SONGS = JSON.parse(cached);
+            applySongs();
+            setStatus('');
+            if (cachedTime) lastUpdateEl.textContent = '快取：' + new Date(+cachedTime).toLocaleString('zh-HK');
+            fetchAndCache(false).catch(() => {});
+            return;
+          }
+        }
+        await fetchAndCache(force);
+      } catch (err) {
+        console.error(err);
+        const cached = localStorage.getItem(CACHE_KEY);
+        if (cached) {
+          SONGS = JSON.parse(cached);
+          applySongs();
+          setStatus('離線模式（使用本地快取）', 'error');
+          toast('網絡失敗，使用本地快取');
+        } else {
+          grid.innerHTML = '<div class="empty"><div class="emoji">⚠️</div>無法載入 Songlist.csv<br><small>' + (err.message || err) + '</small></div>';
+          setStatus('載入失敗：' + (err.message || err), 'error');
+        }
+      } finally {
+        btnRefresh.classList.remove('spin');
+      }
+    }
+
+    async function fetchAndCache(showToast) {
+      const res = await fetch(CSV_URL + '?t=' + Date.now(), { cache: 'no-store' });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const text = await res.text();
+      const rows = parseCSV(text);
+      const songs = rowsToSongs(rows);
+      if (!songs.length) throw new Error('CSV 沒有有效歌曲');
+      SONGS = songs;
+      localStorage.setItem(CACHE_KEY, JSON.stringify(songs));
+      const now = Date.now();
+      localStorage.setItem(CACHE_TIME_KEY, String(now));
+      applySongs();
+      lastUpdateEl.textContent = '更新於 ' + new Date(now).toLocaleString('zh-HK');
+      setStatus('');
+      if (showToast) toast('已更新 ' + songs.length + ' 首歌曲');
+    }
+
+    function applySongs() {
+      totalEl.textContent = SONGS.length;
+      rebuildSingerSelect();
+      render();
+    }
+
+    function rebuildSingerSelect() {
+      const current = fSinger.value;
+      while (fSinger.options.length > 1) fSinger.remove(1);
+      const map = {};
+      SONGS.forEach(s => {
+        s.versions.forEach(v => {
+          if (!v.singer) return;
+          v.singer.replace(/\//g, '／').split('／').forEach(p => {
+            p = p.trim();
+            if (p) map[p] = (map[p] || 0) + 1;
+          });
+        });
+      });
+      Object.entries(map)
+        .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'ja'))
+        .forEach(([name, cnt]) => {
+          const opt = document.createElement('option');
+          opt.value = name;
+          opt.textContent = name + ' (' + cnt + ')';
+          fSinger.appendChild(opt);
+        });
+      if ([...fSinger.options].some(o => o.value === current)) fSinger.value = current;
+      else { fSinger.value = ''; singerFilter = ''; }
+    }
+
+    function getSeriesTags(song) {
+      const tags = new Set();
+      song.versions.forEach(v => {
+        const ver = v.version || '';
+        if (/星奏|学院祭/.test(ver)) tags.add('星奏学院祭');
+        else if (/Featuring/i.test(ver)) tags.add('Featuring');
+        else if (/Kiniro no Corda 1/.test(ver)) tags.add('Kiniro no Corda 1');
+        else if (/Kiniro no Corda 2/.test(ver)) tags.add('Kiniro no Corda 2');
+        else if (/Kiniro no Corda 3/.test(ver)) tags.add('Kiniro no Corda 3');
+        else if (/Kiniro no Corda 4/.test(ver)) tags.add('Kiniro no Corda 4');
+        else if (/Brothers Conflict/i.test(ver)) tags.add('Brothers Conflict');
+        else if (/code realize/i.test(ver)) tags.add('Code:Realize');
+        else if (/柯南|名探偵|Kuraki|GARNET|BREAKERZ|ZARD|Hundred Percent|Grram|Iori/i.test(ver + song.song)) tags.add('柯南／動漫主題曲');
+        else if (ver) tags.add('其他');
+      });
+      return [...tags];
+    }
+
+    function matchQuery(song, q) {
+      if (!q) return true;
+      const nq = normalize(q);
+      if (normalize(song.song).includes(nq)) return true;
+      if (song.clean && normalize(song.clean).includes(nq)) return true;
+      if (normalize(song.role).includes(nq)) return true;
+      if (song.lyrics && normalize(song.lyrics).includes(nq)) return true;
+      for (const v of song.versions) {
+        if (normalize(v.version).includes(nq)) return true;
+        if (normalize(v.singer).includes(nq)) return true;
+      }
+      return false;
+    }
+    function matchSeries(song) {
+      if (!seriesFilter) return true;
+      return getSeriesTags(song).includes(seriesFilter);
+    }
+    function matchSinger(song) {
+      if (!singerFilter) return true;
+      return song.versions.some(v => {
+        if (!v.singer) return false;
+        return v.singer.replace(/\//g, '／').split('／').some(p => p.trim() === singerFilter);
+      });
+    }
+    function highlight(text, q) {
+      if (!q || !text) return text || '';
+      const escaped = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      try {
+        return text.replace(new RegExp('(' + escaped + ')', 'gi'), '<span class="highlight">$1</span>');
+      } catch { return text; }
+    }
+    function badgeClass(tag) {
+      if (tag.startsWith('Kiniro')) return 'purple';
+      if (tag === 'Featuring') return 'green';
+      if (tag.includes('柯南') || tag === 'Brothers Conflict' || tag === 'Code:Realize') return 'orange';
+      return '';
+    }
+    function displayTitle(song) {
+      if (song.clean) return highlight(song.clean, query);
+      return highlight(song.song, query);
+    }
+    function sortSongs(list) {
+      const arr = [...list];
+      if (sortBy === 'name') arr.sort((a, b) => (a.clean || a.song).localeCompare(b.clean || b.song, 'ja'));
+      else if (sortBy === 'role') arr.sort((a, b) => (a.role || '').localeCompare(b.role || '', 'ja'));
+      else if (sortBy === 'versions') arr.sort((a, b) => b.versions.length - a.versions.length);
+      return arr;
+    }
+
+    function render() {
+      let list = SONGS.filter(s => matchQuery(s, query) && matchSeries(s) && matchSinger(s));
+      list = sortSongs(list);
+      shownEl.textContent = list.length;
+      if (!SONGS.length) return;
+      if (list.length === 0) {
+        grid.innerHTML = '<div class="empty"><div class="emoji">📭</div>找不到相關歌曲<br><small>試試其他關鍵字或清除篩選</small></div>';
+        return;
+      }
+      grid.innerHTML = list.map((s, idx) => {
+        const tags = getSeriesTags(s);
+        const badgeHtml = tags.slice(0, 3).map(t =>
+          '<span class="badge ' + badgeClass(t) + '">' + t + '</span>'
+        ).join(' ');
+        const versHtml = s.versions.map(v =>
+          '<div class="ver-row"><div class="v-name">' + highlight(v.version || '—', query) + '</div>' +
+          (v.singer ? '<div class="v-singer">' + highlight(v.singer, query) + '</div>' : '') + '</div>'
+        ).join('');
+        const lyricsBtn = s.lyrics
+          ? '<button type="button" class="btn lyrics" data-lyrics="' + encodeURIComponent(s.lyrics) + '" data-title="' + encodeURIComponent(s.clean || s.song) + '">📝 歌詞</button>'
+          : '';
+        return '<article class="card"><div>' + (badgeHtml || '<span class="badge">歌曲</span>') + '</div>' +
+          '<div class="card-title">' + displayTitle(s) + '</div>' +
+          (s.role ? '<div class="card-sub">👤 ' + highlight(s.role, query) + '</div>' : '') +
+          '<div class="meta"><strong>版本數：</strong>' + s.versions.length + '</div>' +
+          '<div class="ver-list">' + versHtml + '</div>' +
+          lyricsBtn + '</article>';
+      }).join('');
+    }
+
+    // ===== Lyrics viewer =====
+    function probeImage(url) {
+      return new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => resolve(url);
+        img.onerror = () => resolve(null);
+        img.src = url;
+      });
+    }
+
+    async function collectLyricImages(keyword) {
+      const found = [];
+      // try jpeg then jpg for each index
+      for (let n = 1; n <= MAX_LYRIC_PAGES; n++) {
+        let hit = null;
+        for (const ext of ['jpeg', 'jpg', 'png', 'webp']) {
+          const url = LYRIC_DIR + keyword + '_' + n + '.' + ext;
+          hit = await probeImage(url);
+          if (hit) break;
+        }
+        if (!hit) {
+          // if first page missing, stop; if later missing, stop sequence
+          break;
+        }
+        found.push(hit);
+      }
+      return found;
+    }
+
+    function showLyricPage() {
+      if (!lyricImages.length) {
+        lyricsBody.innerHTML = '<div class="lyrics-status">找不到歌詞圖片<br><small>請確認 lyricpic 資料夾及檔名</small></div>';
+        lyricsPage.textContent = '0/0';
+        lyricsPrev.disabled = true;
+        lyricsNext.disabled = true;
+        return;
+      }
+      const url = lyricImages[lyricIndex];
+      lyricsBody.innerHTML = '<img src="' + url + '" alt="歌詞 ' + (lyricIndex + 1) + '" />';
+      lyricsPage.textContent = (lyricIndex + 1) + ' / ' + lyricImages.length;
+      lyricsPrev.disabled = lyricIndex <= 0;
+      lyricsNext.disabled = lyricIndex >= lyricImages.length - 1;
+      lyricsBody.scrollTop = 0;
+    }
+
+    async function openLyrics(keyword, title) {
+      lyricsTitle.textContent = (title || '歌詞') + ' · 歌詞';
+      lyricsBody.innerHTML = '<div class="lyrics-status">載入歌詞圖片中…</div>';
+      lyricsPage.textContent = '—';
+      lyricsPrev.disabled = true;
+      lyricsNext.disabled = true;
+      lyricsModal.classList.add('open');
+      document.body.style.overflow = 'hidden';
+
+      lyricImages = await collectLyricImages(keyword);
+      lyricIndex = 0;
+      showLyricPage();
+      if (!lyricImages.length) toast('找不到「' + keyword + '」的歌詞圖');
+    }
+
+    function closeLyrics() {
+      lyricsModal.classList.remove('open');
+      document.body.style.overflow = '';
+      lyricImages = [];
+      lyricIndex = 0;
+    }
+
+    // Events
+    let timer;
+    qEl.addEventListener('input', () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        query = qEl.value.trim();
+        clearBtn.classList.toggle('show', !!query);
+        render();
+      }, 100);
+    });
+    clearBtn.addEventListener('click', () => {
+      qEl.value = ''; query = ''; clearBtn.classList.remove('show'); qEl.focus(); render();
+    });
+    fSeries.addEventListener('change', () => { seriesFilter = fSeries.value; render(); });
+    fSinger.addEventListener('change', () => { singerFilter = fSinger.value; render(); });
+    sortEl.addEventListener('change', () => { sortBy = sortEl.value; render(); });
+    btnReset.addEventListener('click', () => {
+      qEl.value = ''; query = ''; clearBtn.classList.remove('show');
+      fSeries.value = ''; seriesFilter = '';
+      fSinger.value = ''; singerFilter = '';
+      sortEl.value = 'name'; sortBy = 'name';
+      render();
+    });
+    btnRefresh.addEventListener('click', () => fetchCSV(true));
+    window.addEventListener('scroll', () => {
+      toTop.classList.toggle('show', window.scrollY > 400);
+    }, { passive: true });
+    toTop.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+
+    grid.addEventListener('click', (e) => {
+      const btn = e.target.closest('.btn.lyrics');
+      if (!btn) return;
+      e.preventDefault();
+      const kw = decodeURIComponent(btn.dataset.lyrics || '');
+      const title = decodeURIComponent(btn.dataset.title || '');
+      if (kw) openLyrics(kw, title);
+    });
+
+    lyricsClose.addEventListener('click', closeLyrics);
+    lyricsPrev.addEventListener('click', () => {
+      if (lyricIndex > 0) { lyricIndex--; showLyricPage(); }
+    });
+    lyricsNext.addEventListener('click', () => {
+      if (lyricIndex < lyricImages.length - 1) { lyricIndex++; showLyricPage(); }
+    });
+    lyricsModal.addEventListener('click', (e) => {
+      if (e.target === lyricsModal) closeLyrics();
+    });
+    document.addEventListener('keydown', (e) => {
+      if (!lyricsModal.classList.contains('open')) return;
+      if (e.key === 'Escape') closeLyrics();
+      if (e.key === 'ArrowLeft') lyricsPrev.click();
+      if (e.key === 'ArrowRight') lyricsNext.click();
+    });
+
+    // swipe on lyrics body
+    let touchX = null;
+    lyricsBody.addEventListener('touchstart', (e) => {
+      touchX = e.changedTouches[0].screenX;
+    }, { passive: true });
+    lyricsBody.addEventListener('touchend', (e) => {
+      if (touchX == null) return;
+      const dx = e.changedTouches[0].screenX - touchX;
+      touchX = null;
+      if (Math.abs(dx) < 50) return;
+      if (dx < 0) lyricsNext.click();
+      else lyricsPrev.click();
+    }, { passive: true });
+
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('./sw.js').catch(() => {});
+    }
+    fetchCSV(false);
+  </script>
+</body>
+</html>
