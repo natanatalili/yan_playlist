@@ -683,14 +683,22 @@
     }, { passive: true });
     toTop.addEventListener('click', function() { window.scrollTo({ top: 0, behavior: 'smooth' }); });
 
-    // Synchronous copy — most reliable on iOS PWA (avoid opacity:0, avoid async)
-    function copyTextSync(text) {
+    // Prefer clipboard API on HTTPS, fallback to execCommand (no readonly, left:-9999px)
+    function copyTextBest(text) {
+      // 1. Modern clipboard (best on HTTPS / iOS)
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        try {
+          // Fire and hope — in user gesture this is usually reliable on HTTPS
+          navigator.clipboard.writeText(text);
+          return true;
+        } catch (e) {}
+      }
+      // 2. Fallback execCommand
       var ok = false;
       try {
         var ta = document.createElement('textarea');
         ta.value = text;
-        ta.setAttribute('readonly', '');
-        // Use negative position, NOT opacity:0 (iOS cannot focus opacity:0 elements)
+        // no readonly — can cause issues on some iOS versions
         ta.style.cssText =
           'position:fixed;top:0;left:-9999px;width:1px;height:1px;' +
           'padding:0;border:0;outline:0;box-shadow:none;background:transparent;';
@@ -706,30 +714,30 @@
       return ok;
     }
 
+    function openMusicApp() {
+      // Programmatic <a> click is more reliable than location.href in PWA standalone
+      var a = document.createElement('a');
+      a.href = 'music://';
+      var isPWA = (navigator.standalone === true) ||
+                  (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+      if (isPWA) a.target = '_blank';
+      a.style.display = 'none';
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(function() {
+        if (a.parentNode) a.parentNode.removeChild(a);
+      }, 100);
+    }
+
     function handleAppleMusic(songName) {
       if (!songName) return;
-      // 1. Sync copy first (while still in user gesture)
-      var copied = copyTextSync(songName);
-      // 2. Backup async clipboard (still try, but don't rely on it)
-      if (!copied && navigator.clipboard && navigator.clipboard.writeText) {
-        try {
-          navigator.clipboard.writeText(songName);
-          copied = true;
-        } catch (e) {}
-      }
+      var copied = copyTextBest(songName);
       if (copied) {
         toast('已複製：「' + songName + '」\n到 Music 搜尋框長按 → 貼上', 3500);
       } else {
         toast('請手動輸入：「' + songName + '」', 3500);
       }
-      // 3. Open Music app immediately (no setTimeout — keep user gesture)
-      try {
-        window.location.href = 'music://';
-      } catch (e) {
-        try {
-          window.location.href = 'https://music.apple.com/library';
-        } catch (e2) {}
-      }
+      openMusicApp();
     }
 
     grid.addEventListener('click', function(e) {
@@ -744,7 +752,7 @@
       if (appleBtn) {
         e.preventDefault();
         var songName = decodeURIComponent(appleBtn.dataset.song || '');
-        handleAppleMusic(songName); // sync path, no async wrapper
+        handleAppleMusic(songName);
       }
     });
     lyricsClose.addEventListener('click', closeLyrics);
