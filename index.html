@@ -96,9 +96,6 @@
       border-color: rgba(250,45,72,0.4); color: #fa2d48; background: rgba(250,45,72,0.1);
       font-weight: 600; flex: 1; padding: 9px 10px; min-width: 0;
     }
-    .btn.apple.loading {
-      opacity: 0.6; pointer-events: none;
-    }
     .card-actions {
       display: flex; gap: 8px; margin-top: 4px;
     }
@@ -686,44 +683,33 @@
     }, { passive: true });
     toTop.addEventListener('click', function() { window.scrollTo({ top: 0, behavior: 'smooth' }); });
 
-    async function openInAppleMusic(songName, btn) {
+    async function openLibraryWithSong(songName) {
       if (!songName) return;
-      if (btn) btn.classList.add('loading');
+      // 1. Copy song name to clipboard so user can paste into Music search
       try {
-        // Use public iTunes Search API to get a real track URL (more reliable than search deep link)
-        var api = 'https://itunes.apple.com/search?term=' + encodeURIComponent(songName) +
-                  '&media=music&entity=song&limit=5&country=hk';
-        var res = await fetch(api);
-        var data = await res.json();
-        var track = null;
-        if (data && data.results && data.results.length) {
-          // Prefer exact / close name match
-          var lower = songName.toLowerCase();
-          track = data.results.find(function(r) {
-            return (r.trackName || '').toLowerCase() === lower;
-          }) || data.results.find(function(r) {
-            return (r.trackName || '').toLowerCase().indexOf(lower) >= 0;
-          }) || data.results[0];
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(songName);
+        } else {
+          // Fallback for older browsers
+          var ta = document.createElement('textarea');
+          ta.value = songName;
+          ta.style.position = 'fixed';
+          ta.style.left = '-9999px';
+          document.body.appendChild(ta);
+          ta.select();
+          document.execCommand('copy');
+          document.body.removeChild(ta);
         }
-        if (track && track.trackViewUrl) {
-          // Open the specific song page; iOS will hand off to Music app via universal link
-          var url = track.trackViewUrl.replace('https://', 'https://').replace('http://', 'https://');
-          // Prefer app if possible
-          if (url.indexOf('?') >= 0) url += '&app=music';
-          else url += '?app=music';
-          window.location.href = url;
-          return;
-        }
-        // Fallback: open web search
-        window.open('https://music.apple.com/hk/search?term=' + encodeURIComponent(songName), '_blank');
-        toast('找不到完全相符歌曲，已開啟搜尋');
+        toast('歌名已複製，請在 Music 貼上搜尋');
       } catch (err) {
         console.error(err);
-        window.open('https://music.apple.com/hk/search?term=' + encodeURIComponent(songName), '_blank');
-        toast('連線失敗，已開啟網頁搜尋');
-      } finally {
-        if (btn) btn.classList.remove('loading');
+        toast('無法複製歌名');
       }
+      // 2. Open Music app Library tab
+      // music://music.apple.com/library is the most reliable way to open Library
+      setTimeout(function() {
+        window.location.href = 'music://music.apple.com/library';
+      }, 300);
     }
 
     grid.addEventListener('click', function(e) {
@@ -738,7 +724,7 @@
       if (appleBtn) {
         e.preventDefault();
         var songName = decodeURIComponent(appleBtn.dataset.song || '');
-        openInAppleMusic(songName, appleBtn);
+        openLibraryWithSong(songName);
       }
     });
     lyricsClose.addEventListener('click', closeLyrics);
