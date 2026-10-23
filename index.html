@@ -683,33 +683,43 @@
     }, { passive: true });
     toTop.addEventListener('click', function() { window.scrollTo({ top: 0, behavior: 'smooth' }); });
 
+    function copyText(text) {
+      // Method 1: modern clipboard API
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        return navigator.clipboard.writeText(text).then(function() { return true; }).catch(function() { return false; });
+      }
+      // Method 2: legacy
+      return new Promise(function(resolve) {
+        try {
+          var ta = document.createElement('textarea');
+          ta.value = text;
+          ta.setAttribute('readonly', '');
+          ta.style.cssText = 'position:fixed;top:0;left:0;width:1px;height:1px;opacity:0;';
+          document.body.appendChild(ta);
+          ta.focus();
+          ta.select();
+          ta.setSelectionRange(0, text.length);
+          var ok = document.execCommand('copy');
+          document.body.removeChild(ta);
+          resolve(!!ok);
+        } catch (e) {
+          resolve(false);
+        }
+      });
+    }
+
     async function openLibraryWithSong(songName) {
       if (!songName) return;
-      // 1. Copy song name to clipboard so user can paste into Music search
-      try {
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-          await navigator.clipboard.writeText(songName);
-        } else {
-          // Fallback for older browsers
-          var ta = document.createElement('textarea');
-          ta.value = songName;
-          ta.style.position = 'fixed';
-          ta.style.left = '-9999px';
-          document.body.appendChild(ta);
-          ta.select();
-          document.execCommand('copy');
-          document.body.removeChild(ta);
-        }
-        toast('歌名已複製，請在 Music 貼上搜尋');
-      } catch (err) {
-        console.error(err);
-        toast('無法複製歌名');
+      var copied = await copyText(songName);
+      if (copied) {
+        toast('歌名已複製 ✓ 請在 Music 貼上搜尋', 2800);
+      } else {
+        toast('複製失敗，請手動輸入歌名', 2800);
       }
-      // 2. Open Music app Library tab
-      // music://music.apple.com/library is the most reliable way to open Library
+      // Delay so clipboard has time to settle on iOS before switching apps
       setTimeout(function() {
         window.location.href = 'music://music.apple.com/library';
-      }, 300);
+      }, 450);
     }
 
     grid.addEventListener('click', function(e) {
