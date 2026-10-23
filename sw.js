@@ -1,4 +1,4 @@
-const CACHE = 'corda-v4';
+const CACHE = 'corda-v5';
 const ASSETS = [
   './',
   './index.html',
