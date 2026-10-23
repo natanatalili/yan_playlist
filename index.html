@@ -683,43 +683,53 @@
     }, { passive: true });
     toTop.addEventListener('click', function() { window.scrollTo({ top: 0, behavior: 'smooth' }); });
 
-    function copyText(text) {
-      // Method 1: modern clipboard API
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        return navigator.clipboard.writeText(text).then(function() { return true; }).catch(function() { return false; });
+    // Synchronous copy — most reliable on iOS PWA (avoid opacity:0, avoid async)
+    function copyTextSync(text) {
+      var ok = false;
+      try {
+        var ta = document.createElement('textarea');
+        ta.value = text;
+        ta.setAttribute('readonly', '');
+        // Use negative position, NOT opacity:0 (iOS cannot focus opacity:0 elements)
+        ta.style.cssText =
+          'position:fixed;top:0;left:-9999px;width:1px;height:1px;' +
+          'padding:0;border:0;outline:0;box-shadow:none;background:transparent;';
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        ta.setSelectionRange(0, text.length);
+        ok = document.execCommand('copy');
+        document.body.removeChild(ta);
+      } catch (e) {
+        ok = false;
       }
-      // Method 2: legacy
-      return new Promise(function(resolve) {
-        try {
-          var ta = document.createElement('textarea');
-          ta.value = text;
-          ta.setAttribute('readonly', '');
-          ta.style.cssText = 'position:fixed;top:0;left:0;width:1px;height:1px;opacity:0;';
-          document.body.appendChild(ta);
-          ta.focus();
-          ta.select();
-          ta.setSelectionRange(0, text.length);
-          var ok = document.execCommand('copy');
-          document.body.removeChild(ta);
-          resolve(!!ok);
-        } catch (e) {
-          resolve(false);
-        }
-      });
+      return ok;
     }
 
-    async function openLibraryWithSong(songName) {
+    function handleAppleMusic(songName) {
       if (!songName) return;
-      var copied = await copyText(songName);
-      if (copied) {
-        toast('歌名已複製 ✓ 請在 Music 貼上搜尋', 2800);
-      } else {
-        toast('複製失敗，請手動輸入歌名', 2800);
+      // 1. Sync copy first (while still in user gesture)
+      var copied = copyTextSync(songName);
+      // 2. Backup async clipboard (still try, but don't rely on it)
+      if (!copied && navigator.clipboard && navigator.clipboard.writeText) {
+        try {
+          navigator.clipboard.writeText(songName);
+          copied = true;
+        } catch (e) {}
       }
-      // Delay so clipboard has time to settle on iOS before switching apps
-      setTimeout(function() {
-        window.location.href = 'music://music.apple.com/library';
-      }, 450);
+      if (copied) {
+        toast('已複製：「' + songName + '」\n到 Music 搜尋框長按 → 貼上', 3500);
+      } else {
+        toast('請手動輸入：「' + songName + '」', 3500);
+      }
+      // 3. Open Music app immediately (no setTimeout — keep user gesture)
+      try {
+        window.location.href = 'music://';
+      } catch (e) {
+        try {
+          window.location.href = 'https://music.apple.com/library';
+        } catch (e2) {}
+      }
     }
 
     grid.addEventListener('click', function(e) {
@@ -734,7 +744,7 @@
       if (appleBtn) {
         e.preventDefault();
         var songName = decodeURIComponent(appleBtn.dataset.song || '');
-        openLibraryWithSong(songName);
+        handleAppleMusic(songName); // sync path, no async wrapper
       }
     });
     lyricsClose.addEventListener('click', closeLyrics);
