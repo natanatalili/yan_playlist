@@ -696,8 +696,9 @@
         e.preventDefault();
         var songName = decodeURIComponent(appleBtn.dataset.song || '');
         if (!songName) return;
-        var url = 'https://music.apple.com/hk/search?term=' + encodeURIComponent(songName);
-        window.open(url, '_blank', 'noopener,noreferrer');
+        // music:// scheme is more reliable for opening search directly in the Music app
+        var url = 'music://music.apple.com/search?term=' + encodeURIComponent(songName);
+        window.location.href = url;
       }
     });
     lyricsClose.addEventListener('click', closeLyrics);
