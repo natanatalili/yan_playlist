@@ -764,16 +764,7 @@
       if (e.key === 'ArrowLeft') lyricsPrev.click();
       if (e.key === 'ArrowRight') lyricsNext.click();
     });
-    var touchX = null;
-    lyricsBody.addEventListener('touchstart', function(e) { touchX = e.changedTouches[0].screenX; }, { passive: true });
-    lyricsBody.addEventListener('touchend', function(e) {
-      if (touchX == null) return;
-      var dx = e.changedTouches[0].screenX - touchX;
-      touchX = null;
-      if (Math.abs(dx) < 50) return;
-      if (dx < 0) lyricsNext.click(); else lyricsPrev.click();
-    }, { passive: true });
-
+    
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('./sw.js').catch(function() {});
     }
